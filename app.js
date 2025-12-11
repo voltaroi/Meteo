@@ -53,8 +53,26 @@ document.addEventListener('DOMContentLoaded', () => {
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('/Meteo/service-worker.js');
+            const registration = await navigator.serviceWorker.register('./service-worker.js');
             console.log('✅ Service Worker enregistré:', registration.scope);
+            
+            // Forcer la mise à jour du Service Worker
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('🔄 Nouvelle version du Service Worker détectée');
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'activated') {
+                        console.log('✅ Nouvelle version activée');
+                        window.location.reload();
+                    }
+                });
+            });
+            
+            // Vérifier les mises à jour toutes les 10 secondes
+            setInterval(() => {
+                registration.update();
+            }, 10000);
+            
         } catch (error) {
             console.error('❌ Erreur Service Worker:', error);
         }
@@ -116,8 +134,23 @@ async function requestNotificationPermission() {
         updateNotifyButton();
         
         if (permission === 'granted') {
-            console.log('📤 Envoi notification de test (SW) ...');
-            sendWeatherNotification('MétéoPWA', 'Notifications activées ✅', 'welcome');
+            console.log('📤 Envoi notification de test...');
+            // Notification de test
+            const notif = new Notification('MétéoPWA', {
+                body: 'Les notifications sont maintenant activées ! 🎉',
+                icon: './icons/icon-192.png',
+                tag: 'welcome',
+            });
+            
+            notif.onclick = () => {
+                console.log('Notification cliquée');
+                window.focus();
+                notif.close();
+            };
+            
+            // Afficher aussi un message dans l'interface
+            showError('✅ Notification de test envoyée !');
+            setTimeout(() => hideError(), 3000);
         }
     } catch (error) {
         console.error('Erreur lors de la demande de permission:', error);
@@ -126,62 +159,25 @@ async function requestNotificationPermission() {
 }
 
 function sendWeatherNotification(city, message, type = 'info') {
-    console.log('📢 Notification demandée:', { city, message, type, permission: Notification?.permission });
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    // Toujours afficher en UI (feedback immédiat)
-    displayNotificationUI(`Météo - ${city}`, message, type);
-
-    // Si pas supporté ou pas autorisé, on s'arrête au fallback UI
-    if (!('Notification' in window) || Notification.permission !== 'granted') {
-        console.warn('Notifications système non disponibles ou non autorisées');
-        return;
-    }
-
-    // Priorité : via le Service Worker
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready
-            .then((registration) => registration.showNotification(`Météo - ${city}`, {
-                body: message,
-                icon: '/Meteo/icons/icon-192.png',
-                badge: '/Meteo/icons/icon-192.png',
-                tag: `${type}-${city}`,
-                requireInteraction: false
-            }))
-            .then(() => console.log('✅ Notification système envoyée via SW'))
-            .catch((err) => {
-                console.error('Erreur showNotification:', err);
-            });
-        return;
-    }
-
-    // Fallback ultime : Notification API directe
-    try {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: `Météo - ${city}`,
+            body: message,
+            tag: `${type}-${city}`,
+            icon: 'icons/icon-192.png'
+        });
+    } else {
+        // fallback si pas de SW actif
         new Notification(`Météo - ${city}`, {
             body: message,
-            icon: '/Meteo/icons/icon-192.png',
+            icon: 'icons/icon-192.png',
             tag: `${type}-${city}`
         });
-        console.log('✅ Notification système envoyée (fallback direct)');
-    } catch (err) {
-        console.error('Erreur Notification API:', err);
     }
 }
-
-// Fallback visuel si notifications système indisponibles
-function displayNotificationUI(title, body, type = 'info') {
-    const div = document.createElement('div');
-    div.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;' +
-        'background:#4b6cb7;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.2);' +
-        'font-family:Segoe UI, sans-serif;max-width:320px;width:90%;opacity:0;transition:opacity 0.2s ease';
-    div.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${title}</div><div>${body}</div>`;
-    document.body.appendChild(div);
-    requestAnimationFrame(() => { div.style.opacity = '1'; });
-    setTimeout(() => {
-        div.style.opacity = '0';
-        setTimeout(() => div.remove(), 250);
-    }, 4500);
-}
-
 
 // ===== Recherche et API Météo =====
 async function handleSearch() {
