@@ -330,3 +330,69 @@ function showError(message) {
 function hideError() {
     elements.errorMessage.classList.add('hidden');
 }
+
+// ===== Événements =====
+
+// Rechercher la ville
+elements.searchBtn.addEventListener('click', handleSearch);
+
+// Appuyer sur "Entrée" dans l'input
+elements.cityInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleSearch();
+});
+
+// Activer les notifications
+elements.notifyBtn.addEventListener('click', requestNotificationPermission);
+
+// Ajouter aux favoris
+elements.favoriteBtn.addEventListener('click', () => {
+    if (!currentCity) return showError('Aucune ville sélectionnée.');
+    
+    const favorites = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY_FAVORITES) || '[]');
+    
+    if (!favorites.find(f => f.name === currentCity.name)) {
+        favorites.push(currentCity);
+        localStorage.setItem(CONFIG.STORAGE_KEY_FAVORITES, JSON.stringify(favorites));
+        loadFavorites();
+    }
+});
+
+// Changer le thème
+elements.themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-theme');
+    document.body.classList.toggle('light-theme');
+    
+    localStorage.setItem(
+        CONFIG.STORAGE_KEY_THEME,
+        document.body.classList.contains('dark-theme') ? 'dark' : 'light'
+    );
+});
+
+// Charger les favoris
+function loadFavorites() {
+    const favorites = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY_FAVORITES) || '[]');
+
+    elements.favoritesList.innerHTML = favorites.map(fav => `
+        <div class="favorite-item">
+            <span>${fav.name}</span>
+            <button onclick="fetchWeather(${fav.lat}, ${fav.lon}, '${fav.name}')">📍</button>
+        </div>
+    `).join('');
+
+    elements.favoritesSection.classList.toggle('hidden', favorites.length === 0);
+}
+
+// Charger les données au démarrage
+document.addEventListener('DOMContentLoaded', () => {
+    updateNotifyButton();
+    registerServiceWorker();
+    
+    // Charger thème
+    const savedTheme = localStorage.getItem(CONFIG.STORAGE_KEY_THEME);
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+        document.body.classList.remove('light-theme');
+    }
+    
+    loadFavorites();
+});
