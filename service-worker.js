@@ -1,5 +1,5 @@
 // ===== CONFIGURATION =====
-const CACHE_NAME = 'meteo-pwa-v5';
+const CACHE_NAME = 'meteo-pwa-v6';
 const ASSETS = [
     '/Meteo/',
     '/Meteo/index.html',

@@ -116,23 +116,8 @@ async function requestNotificationPermission() {
         updateNotifyButton();
         
         if (permission === 'granted') {
-            console.log('📤 Envoi notification de test via SW...');
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.ready
-                    .then((registration) => registration.showNotification('MétéoPWA', {
-                        body: 'Les notifications sont maintenant activées ! 🎉',
-                        icon: '/Meteo/icons/icon-192.png',
-                        badge: '/Meteo/icons/icon-192.png',
-                        tag: 'welcome',
-                        requireInteraction: false
-                    }))
-                    .catch((err) => {
-                        console.error('Erreur test notification SW:', err);
-                        displayNotificationUI('MétéoPWA', 'Notifications activées ✅');
-                    });
-            } else {
-                displayNotificationUI('MétéoPWA', 'Notifications activées ✅');
-            }
+            console.log('📤 Envoi notification de test (SW) ...');
+            sendWeatherNotification('MétéoPWA', 'Notifications activées ✅', 'welcome');
         }
     } catch (error) {
         console.error('Erreur lors de la demande de permission:', error);
@@ -141,9 +126,14 @@ async function requestNotificationPermission() {
 }
 
 function sendWeatherNotification(city, message, type = 'info') {
-    // Si pas supporté ou pas autorisé, afficher dans l'UI
+    console.log('📢 Notification demandée:', { city, message, type, permission: Notification?.permission });
+
+    // Toujours afficher en UI (feedback immédiat)
+    displayNotificationUI(`Météo - ${city}`, message, type);
+
+    // Si pas supporté ou pas autorisé, on s'arrête au fallback UI
     if (!('Notification' in window) || Notification.permission !== 'granted') {
-        displayNotificationUI(`Météo - ${city}`, message, type);
+        console.warn('Notifications système non disponibles ou non autorisées');
         return;
     }
 
@@ -157,9 +147,9 @@ function sendWeatherNotification(city, message, type = 'info') {
                 tag: `${type}-${city}`,
                 requireInteraction: false
             }))
+            .then(() => console.log('✅ Notification système envoyée via SW'))
             .catch((err) => {
                 console.error('Erreur showNotification:', err);
-                displayNotificationUI(`Météo - ${city}`, message, type);
             });
         return;
     }
@@ -171,9 +161,9 @@ function sendWeatherNotification(city, message, type = 'info') {
             icon: '/Meteo/icons/icon-192.png',
             tag: `${type}-${city}`
         });
+        console.log('✅ Notification système envoyée (fallback direct)');
     } catch (err) {
         console.error('Erreur Notification API:', err);
-        displayNotificationUI(`Météo - ${city}`, message, type);
     }
 }
 
