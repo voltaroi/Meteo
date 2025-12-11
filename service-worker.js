@@ -1,5 +1,5 @@
 // ===== CONFIGURATION =====
-const CACHE_NAME = 'meteo-pwa-v4';
+const CACHE_NAME = 'meteo-pwa-v5';
 const ASSETS = [
     '/Meteo/',
     '/Meteo/index.html',
@@ -132,7 +132,7 @@ async function cacheFirst(request) {
         
         // Si c'est une page HTML, retourner la page d'accueil en cache
         if (request.headers.get('accept')?.includes('text/html')) {
-            const fallback = await caches.match('/index.html');
+            const fallback = await caches.match('/Meteo/index.html');
             if (fallback) return fallback;
         }
         
@@ -167,8 +167,21 @@ self.addEventListener('notificationclick', (event) => {
 
 // ===== Messages depuis l'application =====
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
+    if (!event.data) return;
+
+    if (event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
+    }
+
+    if (event.data.type === 'SHOW_NOTIFICATION') {
+        const { title, body, tag, icon } = event.data;
+        self.registration.showNotification(title || 'Notification', {
+            body: body || '',
+            icon: icon || '/Meteo/icons/icon-192.png',
+            badge: '/Meteo/icons/icon-192.png',
+            tag: tag || 'meteo',
+            requireInteraction: false
+        });
     }
 });
 

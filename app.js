@@ -116,23 +116,23 @@ async function requestNotificationPermission() {
         updateNotifyButton();
         
         if (permission === 'granted') {
-            console.log('📤 Envoi notification de test...');
-            // Notification de test
-            const notif = new Notification('MétéoPWA', {
-                body: 'Les notifications sont maintenant activées ! 🎉',
-                icon: './icons/icon-192.png',
-                tag: 'welcome',
-            });
-            
-            notif.onclick = () => {
-                console.log('Notification cliquée');
-                window.focus();
-                notif.close();
-            };
-            
-            // Afficher aussi un message dans l'interface
-            showError('✅ Notification de test envoyée !');
-            setTimeout(() => hideError(), 3000);
+            console.log('📤 Envoi notification de test via SW...');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then((registration) => registration.showNotification('MétéoPWA', {
+                        body: 'Les notifications sont maintenant activées ! 🎉',
+                        icon: '/Meteo/icons/icon-192.png',
+                        badge: '/Meteo/icons/icon-192.png',
+                        tag: 'welcome',
+                        requireInteraction: false
+                    }))
+                    .catch((err) => {
+                        console.error('Erreur test notification SW:', err);
+                        displayNotificationUI('MétéoPWA', 'Notifications activées ✅');
+                    });
+            } else {
+                displayNotificationUI('MétéoPWA', 'Notifications activées ✅');
+            }
         }
     } catch (error) {
         console.error('Erreur lors de la demande de permission:', error);
@@ -141,60 +141,57 @@ async function requestNotificationPermission() {
 }
 
 function sendWeatherNotification(city, message, type = 'info') {
-    console.log('📢 Tentative notification:', { city, message, type });
-    console.log('Permission:', Notification?.permission);
-    
-    // Si notifications pas disponibles, afficher dans l'interface
-    if (!isNotificationSupported() || Notification.permission !== 'granted') {
-        console.log('⚠️ Notifications non disponibles, affichage dans UI');
+    // Si pas supporté ou pas autorisé, afficher dans l'UI
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        displayNotificationUI(`Météo - ${city}`, message, type);
         return;
     }
-    
-    // Utiliser le Service Worker pour afficher la notification (PWA)
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.ready.then((registration) => {
-            console.log('📤 Envoi notification via Service Worker...');
-            registration.showNotification(city, {
+
+    // Priorité : via le Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready
+            .then((registration) => registration.showNotification(`Météo - ${city}`, {
                 body: message,
                 icon: '/Meteo/icons/icon-192.png',
                 badge: '/Meteo/icons/icon-192.png',
-                tag: type,
-                requireInteraction: false,
-                actions: [
-                    {
-                        action: 'open',
-                        title: 'Ouvrir'
-                    }
-                ]
-            }).then(() => {
-                console.log('✅ Notification envoyée avec succès');
-            }).catch(err => {
-                console.error('❌ Erreur notification:', err);
-            });
-        });
-    } else {
-        // Fallback: utiliser l'API Notification standard (hors PWA)
-        try {
-            console.log('✅ Envoi notification standard...');
-            const notif = new Notification(city, {
-                body: message,
-                icon: '/Meteo/icons/icon-192.png',
-                tag: type,
-                badge: '/Meteo/icons/icon-192.png',
+                tag: `${type}-${city}`,
                 requireInteraction: false
+            }))
+            .catch((err) => {
+                console.error('Erreur showNotification:', err);
+                displayNotificationUI(`Météo - ${city}`, message, type);
             });
-            
-            notif.onclick = () => {
-                window.focus();
-                notif.close();
-            };
-            
-            console.log('✅ Notification envoyée avec succès');
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'envoi de notification:', error);
-        }
+        return;
+    }
+
+    // Fallback ultime : Notification API directe
+    try {
+        new Notification(`Météo - ${city}`, {
+            body: message,
+            icon: '/Meteo/icons/icon-192.png',
+            tag: `${type}-${city}`
+        });
+    } catch (err) {
+        console.error('Erreur Notification API:', err);
+        displayNotificationUI(`Météo - ${city}`, message, type);
     }
 }
+
+// Fallback visuel si notifications système indisponibles
+function displayNotificationUI(title, body, type = 'info') {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;' +
+        'background:#4b6cb7;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,0.2);' +
+        'font-family:Segoe UI, sans-serif;max-width:320px;width:90%;opacity:0;transition:opacity 0.2s ease';
+    div.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${title}</div><div>${body}</div>`;
+    document.body.appendChild(div);
+    requestAnimationFrame(() => { div.style.opacity = '1'; });
+    setTimeout(() => {
+        div.style.opacity = '0';
+        setTimeout(() => div.remove(), 250);
+    }, 4500);
+}
+
 
 // ===== Recherche et API Météo =====
 async function handleSearch() {
