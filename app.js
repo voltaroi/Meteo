@@ -186,44 +186,39 @@ async function fetchWeather(lat, lon, cityName) {
     }
 }
 
-function displayWeather(location, data) {
-    const { current, hourly } = data;
+function displayWeather(data, cityName) {
+    const current = data.current;
+    const hourly = data.hourly;
 
-    // ======== Nom de la ville ========
-    const cityName = `${location.name}${location.admin1 ? ', ' + location.admin1 : ''}, ${location.country}`;
+    // ===== Nom de la ville =====
     elements.cityName.textContent = cityName;
 
-    // ======== Température actuelle ========
-    elements.currentTemp.textContent = `${Math.round(current.temperature_2m)}°C`;
+    // ===== Température actuelle =====
+    elements.temperature.textContent = Math.round(current.temperature_2m);
 
-    // ======== Emoji météo ========
-    elements.weatherEmoji.textContent = getWeatherEmoji(current.weather_code);
+    // ===== Emoji météo =====
+    elements.weatherIcon.textContent = getWeatherEmoji(current.weather_code);
 
-    // ======== Prévisions horaires ========
-    const now = new Date();
-    const currentISO = now.toISOString().slice(0, 13); // "2025-01-10T14"
+    // ===== Ressenti, vent, humidité =====
+    elements.feelsLike.textContent = Math.round(current.apparent_temperature) + "°C";
+    elements.wind.textContent = Math.round(current.wind_speed_10m) + " km/h";
+    elements.humidity.textContent = current.relative_humidity_2m + " %";
 
-    // On cherche dans la liste l’heure correspondant au moment actuel
-    let startIndex = hourly.time.findIndex(t => t.startsWith(currentISO));
-    if (startIndex === -1) startIndex = 0; // fallback au cas où
-
+    // ===== Prévisions horaires pour les 4 prochaines heures =====
+    const nowHour = new Date().getHours();
     const hourlyItems = [];
 
     for (let i = 1; i <= 4; i++) {
-        const hourIndex = startIndex + i;
+        const hourIndex = nowHour + i;
         if (hourIndex >= hourly.time.length) break;
 
         const time = new Date(hourly.time[hourIndex]);
         const temp = hourly.temperature_2m[hourIndex];
         const code = hourly.weather_code[hourIndex];
 
-        // Détection alertes
-        const isRain = CONFIG.RAIN_CODES.includes(code);
-        const isHot = temp > CONFIG.TEMP_THRESHOLD;
-
-        let alertClass = '';
-        if (isRain) alertClass = 'rain-alert';
-        else if (isHot) alertClass = 'temp-alert';
+        let alertClass = "";
+        if (CONFIG.RAIN_CODES.includes(code)) alertClass = "rain-alert";
+        else if (temp > CONFIG.TEMP_THRESHOLD) alertClass = "temp-alert";
 
         hourlyItems.push(`
             <div class="hourly-item ${alertClass}">
@@ -234,10 +229,10 @@ function displayWeather(location, data) {
         `);
     }
 
-    elements.hourlyList.innerHTML = hourlyItems.join('');
+    elements.hourlyList.innerHTML = hourlyItems.join("");
 
-    // ======== Afficher la section ========
-    elements.weatherSection.classList.remove('hidden');
+    // ===== Afficher la section météo =====
+    elements.weatherSection.classList.remove("hidden");
 }
 
 function checkWeatherAlerts(data, cityName) {
