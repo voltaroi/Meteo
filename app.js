@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('./service-worker.js');
+            const registration = await navigator.serviceWorker.register('/Meteo/service-worker.js');
             console.log('✅ Service Worker enregistré:', registration.scope);
         } catch (error) {
             console.error('❌ Erreur Service Worker:', error);
