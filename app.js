@@ -368,6 +368,8 @@ elements.cityInput.addEventListener('keypress', (e) => {
 // Activer les notifications
 elements.notifyBtn.addEventListener('click', requestNotificationPermission);
 
+requestNotificationPermission()
+
 // Ajouter aux favoris
 elements.favoriteBtn.addEventListener('click', () => {
     if (!currentCity) return showError('Aucune ville sélectionnée.');
