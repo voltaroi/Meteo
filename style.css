@@ -293,3 +293,72 @@ body.dark-theme .favorite-item {
 #error-message.show {
     display: block;
 }
+
+/* ===== Améliorations Mobile ===== */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    h1 {
+        font-size: 2em;
+    }
+    
+    .controls {
+        flex-direction: column;
+    }
+    
+    #city-input {
+        width: 100%;
+    }
+    
+    button {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1em;
+    }
+    
+    .weather-card {
+        padding: 20px;
+    }
+    
+    #temperature {
+        font-size: 2.5em;
+    }
+    
+    .weather-details {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+/* Améliorer les zones tactiles sur mobile */
+@media (hover: none) and (pointer: coarse) {
+    button {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    
+    .favorite-item {
+        min-height: 60px;
+        touch-action: manipulation;
+    }
+    
+    /* Désactiver les effets hover sur tactile */
+    button:hover {
+        transform: none;
+    }
+    
+    .favorite-item:hover {
+        transform: none;
+    }
+    
+    /* Ajouter un effet au tap */
+    button:active {
+        opacity: 0.7;
+    }
+    
+    .favorite-item:active {
+        opacity: 0.7;
+    }
+}

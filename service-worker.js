@@ -1,20 +1,19 @@
 // ===== CONFIGURATION =====
 const CACHE_NAME = 'meteo-pwa-v1';
 const ASSETS = [
-    '/Meteo/',
-    '/Meteo/index.html',
-    '/Meteo/style.css',
-    '/Meteo/app.js',
-    '/Meteo/manifest.json',
-
-    '/Meteo/icons/icon-72.png',
-    '/Meteo/icons/icon-96.png',
-    '/Meteo/icons/icon-128.png',
-    '/Meteo/icons/icon-144.png',
-    '/Meteo/icons/icon-152.png',
-    '/Meteo/icons/icon-192.png',
-    '/Meteo/icons/icon-384.png',
-    '/Meteo/icons/icon-512.png'
+    './',
+    './index.html',
+    './style.css',
+    './app.js',
+    './manifest.json',
+    './icons/icon-72.png',
+    './icons/icon-96.png',
+    './icons/icon-128.png',
+    './icons/icon-144.png',
+    './icons/icon-152.png',
+    './icons/icon-192.png',
+    './icons/icon-384.png',
+    './icons/icon-512.png'
 ];
 
 // ===== INSTALL =====

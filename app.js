@@ -32,6 +32,17 @@ const elements = {
 // ===== État de l'application =====
 let currentCity = null;
 
+// ===== Gestionnaire d'erreurs global (pour déboguer sur mobile) =====
+window.addEventListener('error', (event) => {
+    console.error('Erreur globale:', event.error);
+    showError(`Erreur: ${event.error?.message || 'Erreur inconnue'}`);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Promesse rejetée:', event.reason);
+    showError(`Erreur: ${event.reason?.message || 'Erreur de connexion'}`);
+});
+
 // ===== Initialisation =====
 document.addEventListener('DOMContentLoaded', () => {
     updateNotifyButton();
@@ -42,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            const registration = await navigator.serviceWorker.register('/Meteo/service-worker.js');
+            const registration = await navigator.serviceWorker.register('./service-worker.js');
             console.log('✅ Service Worker enregistré:', registration.scope);
         } catch (error) {
             console.error('❌ Erreur Service Worker:', error);
