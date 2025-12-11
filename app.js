@@ -96,6 +96,10 @@ function updateNotifyButton() {
 }
 
 async function requestNotificationPermission() {
+    console.log('🔔 Demande de permission notifications...');
+    console.log('Support:', 'Notification' in window);
+    console.log('Permission actuelle:', Notification.permission);
+    
     if (!('Notification' in window)) {
         showError('Les notifications ne sont pas supportées par votre navigateur.');
         return;
@@ -108,35 +112,68 @@ async function requestNotificationPermission() {
 
     try {
         const permission = await Notification.requestPermission();
+        console.log('✅ Permission obtenue:', permission);
         updateNotifyButton();
         
         if (permission === 'granted') {
+            console.log('📤 Envoi notification de test...');
             // Notification de test
-            new Notification('MétéoPWA', {
+            const notif = new Notification('MétéoPWA', {
                 body: 'Les notifications sont maintenant activées ! 🎉',
-                icon: 'icons/icon-192.png',
-                tag: 'welcome'
+                icon: './icons/icon-192.png',
+                tag: 'welcome',
+                requireInteraction: false
             });
+            
+            notif.onclick = () => {
+                console.log('Notification cliquée');
+                window.focus();
+                notif.close();
+            };
+            
+            // Afficher aussi un message dans l'interface
+            showError('✅ Notification de test envoyée !');
+            setTimeout(() => hideError(), 3000);
         }
     } catch (error) {
         console.error('Erreur lors de la demande de permission:', error);
+        showError('Erreur: ' + error.message);
     }
 }
 
 function sendWeatherNotification(city, message, type = 'info') {
+    console.log('📢 Tentative notification:', { city, message, type });
+    console.log('Permission:', Notification?.permission);
+    
+    // Si notifications pas disponibles, afficher dans l'interface
     if (!isNotificationSupported() || Notification.permission !== 'granted') {
+        console.log('⚠️ Notifications non disponibles, affichage dans UI');
+        showError(`🌤️ ${city}: ${message}`);
+        setTimeout(() => hideError(), 5000);
         return;
     }
     
     try {
-        new Notification(city, {
+        console.log('✅ Envoi notification...');
+        const notif = new Notification(city, {
             body: message,
-            icon: 'icons/icon-192.png',
+            icon: './icons/icon-192.png',
             tag: type,
-            badge: 'icons/icon-192.png'
+            badge: './icons/icon-192.png',
+            requireInteraction: false
         });
+        
+        notif.onclick = () => {
+            window.focus();
+            notif.close();
+        };
+        
+        console.log('✅ Notification envoyée avec succès');
     } catch (error) {
-        console.error('Erreur lors de l\'envoi de notification:', error);
+        console.error('❌ Erreur lors de l\'envoi de notification:', error);
+        // Fallback: afficher dans l'interface
+        showError(`🌤️ ${city}: ${message}`);
+        setTimeout(() => hideError(), 5000);
     }
 }
 // ===== Recherche et API Météo =====
@@ -256,6 +293,7 @@ function displayWeather(data, cityName) {
 }
 
 function checkWeatherAlerts(data, cityName) {
+    console.log('🔍 Vérification des alertes météo pour:', cityName);
     const hourly = data.hourly;
     const currentHour = new Date().getHours();
     
@@ -264,6 +302,8 @@ function checkWeatherAlerts(data, cityName) {
     let rainHour = null;
     let highTemp = null;
 
+    console.log('⏰ Heure actuelle:', currentHour);
+    
     // Vérifier les 4 prochaines heures
     for (let i = 1; i <= 4; i++) {
         const hourIndex = currentHour + i;
@@ -271,22 +311,29 @@ function checkWeatherAlerts(data, cityName) {
             const code = hourly.weather_code[hourIndex];
             const temp = hourly.temperature_2m[hourIndex];
             
+            console.log(`  Heure +${i} (${hourIndex}h): Code=${code}, Temp=${temp}°C`);
+            
             // Vérifier la pluie
             if (!rainAlert && CONFIG.RAIN_CODES.includes(code)) {
                 rainAlert = true;
                 rainHour = i;
+                console.log(`  ⚠️ ALERTE PLUIE détectée dans ${i}h`);
             }
             
             // Vérifier la température > 10°C
             if (!tempAlert && temp > CONFIG.TEMP_THRESHOLD) {
                 tempAlert = true;
                 highTemp = Math.round(temp);
+                console.log(`  ⚠️ ALERTE TEMPÉRATURE détectée: ${highTemp}°C`);
             }
         }
     }
 
+    console.log('📊 Résumé alertes:', { rainAlert, tempAlert, rainHour, highTemp });
+
     // Envoyer les notifications
     if (rainAlert) {
+        console.log('📤 Envoi notification pluie...');
         sendWeatherNotification(
             cityName,
             `🌧️ Pluie prévue dans ${rainHour} heure${rainHour > 1 ? 's' : ''} !`,
@@ -295,11 +342,16 @@ function checkWeatherAlerts(data, cityName) {
     }
 
     if (tempAlert) {
+        console.log('📤 Envoi notification température...');
         sendWeatherNotification(
             cityName,
             `🌡️ Température supérieure à ${CONFIG.TEMP_THRESHOLD}°C prévue (${highTemp}°C)`,
             'temp'
         );
+    }
+    
+    if (!rainAlert && !tempAlert) {
+        console.log('✅ Aucune alerte détectée');
     }
 }
 
