@@ -142,7 +142,7 @@ async function handleSearch() {
         }
 
         const location = geoData.results[0];
-        const cityName = `${location.name}${location.admin1 ? ', ' + location.admin1 : ''}, ${location.country}`;
+        const cityName = `${location.name}, ${location.country}`;
         
         // 2. Récupérer la météo
         await fetchWeather(location.latitude, location.longitude, cityName);
