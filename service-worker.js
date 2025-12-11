@@ -144,6 +144,27 @@ async function cacheFirst(request) {
     }
 }
 
+// ===== Gestion des clics sur les notifications =====
+self.addEventListener('notificationclick', (event) => {
+    console.log('[SW] Notification cliquée:', event.notification.tag);
+    event.notification.close();
+    
+    // Ouvrir ou ramener au premier plan la fenêtre
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then((clientList) => {
+            // Chercher un client existant
+            for (let client of clientList) {
+                if (client.url === '/' || client.url.includes('/Meteo/')) {
+                    return client.focus();
+                }
+            }
+            // Sinon, ouvrir une nouvelle fenêtre
+            return clients.openWindow('/Meteo/')
+                .then(client => client ? client.focus() : null);
+        })
+    );
+});
+
 // ===== Messages depuis l'application =====
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {

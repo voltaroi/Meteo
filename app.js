@@ -148,32 +148,56 @@ function sendWeatherNotification(city, message, type = 'info') {
     // Si notifications pas disponibles, afficher dans l'interface
     if (!isNotificationSupported() || Notification.permission !== 'granted') {
         console.log('⚠️ Notifications non disponibles, affichage dans UI');
-        showError(`🌤️ ${city}: ${message}`);
-        setTimeout(() => hideError(), 5000);
+        displayNotificationUI(city, message, type);
         return;
     }
     
-    try {
-        console.log('✅ Envoi notification...');
-        const notif = new Notification(city, {
-            body: message,
-            icon: './icons/icon-192.png',
-            tag: type,
-            badge: './icons/icon-192.png',
-            requireInteraction: false
+    // Utiliser le Service Worker pour afficher la notification (PWA)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then((registration) => {
+            console.log('📤 Envoi notification via Service Worker...');
+            registration.showNotification(city, {
+                body: message,
+                icon: '/Meteo/icons/icon-192.png',
+                badge: '/Meteo/icons/icon-192.png',
+                tag: type,
+                requireInteraction: false,
+                actions: [
+                    {
+                        action: 'open',
+                        title: 'Ouvrir'
+                    }
+                ]
+            }).then(() => {
+                console.log('✅ Notification envoyée avec succès');
+            }).catch(err => {
+                console.error('❌ Erreur notification:', err);
+                displayNotificationUI(city, message, type);
+            });
         });
-        
-        notif.onclick = () => {
-            window.focus();
-            notif.close();
-        };
-        
-        console.log('✅ Notification envoyée avec succès');
-    } catch (error) {
-        console.error('❌ Erreur lors de l\'envoi de notification:', error);
-        // Fallback: afficher dans l'interface
-        showError(`🌤️ ${city}: ${message}`);
-        setTimeout(() => hideError(), 5000);
+    } else {
+        // Fallback: utiliser l'API Notification standard (hors PWA)
+        try {
+            console.log('✅ Envoi notification standard...');
+            const notif = new Notification(city, {
+                body: message,
+                icon: '/Meteo/icons/icon-192.png',
+                tag: type,
+                badge: '/Meteo/icons/icon-192.png',
+                requireInteraction: false
+            });
+            
+            notif.onclick = () => {
+                window.focus();
+                notif.close();
+            };
+            
+            console.log('✅ Notification envoyée avec succès');
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'envoi de notification:', error);
+            // Fallback: afficher dans l'interface
+            displayNotificationUI(city, message, type);
+        }
     }
 }
 // ===== Recherche et API Météo =====
