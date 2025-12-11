@@ -113,7 +113,20 @@ async function requestNotificationPermission() {
 }
 
 function sendWeatherNotification(city, message, type = 'info') {
-  
+    if (!isNotificationSupported() || Notification.permission !== 'granted') {
+        return;
+    }
+    
+    try {
+        new Notification(city, {
+            body: message,
+            icon: 'icons/icon-192.png',
+            tag: type,
+            badge: 'icons/icon-192.png'
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'envoi de notification:', error);
+    }
 }
 // ===== Recherche et API Météo =====
 async function handleSearch() {
@@ -190,49 +203,43 @@ function displayWeather(data, cityName) {
     const current = data.current;
     const hourly = data.hourly;
 
-    // ===== Nom de la ville =====
+    // Données actuelles
     elements.cityName.textContent = cityName;
-
-    // ===== Température actuelle =====
     elements.temperature.textContent = Math.round(current.temperature_2m);
-
-    // ===== Emoji météo =====
     elements.weatherIcon.textContent = getWeatherEmoji(current.weather_code);
+    elements.wind.textContent = `${Math.round(current.wind_speed_10m)} km/h`;
+    elements.humidity.textContent = `${current.relative_humidity_2m} %`;
+    elements.feelsLike.textContent = `${Math.round(current.apparent_temperature)}°C`;
 
-    // ===== Ressenti, vent, humidité =====
-    elements.feelsLike.textContent = Math.round(current.apparent_temperature) + "°C";
-    elements.wind.textContent = Math.round(current.wind_speed_10m) + " km/h";
-    elements.humidity.textContent = current.relative_humidity_2m + " %";
-
-    // ===== Prévisions horaires pour les 4 prochaines heures =====
-    const nowHour = new Date().getHours();
+    // Prévisions horaires (4 prochaines heures)
+    const currentHour = new Date().getHours();
     const hourlyItems = [];
+    
+    for (let i = 0; i < 4; i++) {
+        const hourIndex = currentHour + i + 1;
+        if (hourIndex < hourly.time.length) {
+            const time = new Date(hourly.time[hourIndex]);
+            const temp = hourly.temperature_2m[hourIndex];
+            const code = hourly.weather_code[hourIndex];
+            const isRain = CONFIG.RAIN_CODES.includes(code);
+            const isHighTemp = temp > CONFIG.TEMP_THRESHOLD;
+            
+            let alertClass = '';
+            if (isRain) alertClass = 'rain-alert';
+            else if (isHighTemp) alertClass = 'temp-alert';
 
-    for (let i = 1; i <= 4; i++) {
-        const hourIndex = nowHour + i;
-        if (hourIndex >= hourly.time.length) break;
-
-        const time = new Date(hourly.time[hourIndex]);
-        const temp = hourly.temperature_2m[hourIndex];
-        const code = hourly.weather_code[hourIndex];
-
-        let alertClass = "";
-        if (CONFIG.RAIN_CODES.includes(code)) alertClass = "rain-alert";
-        else if (temp > CONFIG.TEMP_THRESHOLD) alertClass = "temp-alert";
-
-        hourlyItems.push(`
-            <div class="hourly-item ${alertClass}">
-                <div class="hourly-time">${time.getHours()}h</div>
-                <div class="hourly-icon">${getWeatherEmoji(code)}</div>
-                <div class="hourly-temp">${Math.round(temp)}°C</div>
-            </div>
-        `);
+            hourlyItems.push(`
+                <div class="hourly-item ${alertClass}">
+                    <div class="hourly-time">${time.getHours()}h</div>
+                    <div class="hourly-icon">${getWeatherEmoji(code)}</div>
+                    <div class="hourly-temp">${Math.round(temp)}°C</div>
+                </div>
+            `);
+        }
     }
 
-    elements.hourlyList.innerHTML = hourlyItems.join("");
-
-    // ===== Afficher la section météo =====
-    elements.weatherSection.classList.remove("hidden");
+    elements.hourlyList.innerHTML = hourlyItems.join('');
+    elements.weatherSection.classList.add('show');
 }
 
 function checkWeatherAlerts(data, cityName) {
@@ -320,21 +327,21 @@ function getWeatherEmoji(code) {
 }
 
 function showLoading() {
-    elements.loading.classList.remove('hidden');
-    elements.weatherSection.classList.add('hidden');
+    elements.loading.style.display = 'block';
+    elements.weatherSection.classList.remove('show');
 }
 
 function hideLoading() {
-    elements.loading.classList.add('hidden');
+    elements.loading.style.display = 'none';
 }
 
 function showError(message) {
     elements.errorMessage.textContent = message;
-    elements.errorMessage.classList.remove('hidden');
+    elements.errorMessage.classList.add('show');
 }
 
 function hideError() {
-    elements.errorMessage.classList.add('hidden');
+    elements.errorMessage.classList.remove('show');
 }
 
 // ===== Événements =====
@@ -379,13 +386,25 @@ function loadFavorites() {
     const favorites = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY_FAVORITES) || '[]');
 
     elements.favoritesList.innerHTML = favorites.map(fav => `
-        <div class="favorite-item">
-            <span>${fav.name}</span>
-            <button onclick="fetchWeather(${fav.lat}, ${fav.lon}, '${fav.name}')">📍</button>
+        <div class="favorite-item" onclick="fetchWeather(${fav.lat}, ${fav.lon}, '${fav.name.replace(/'/g, "\\'")}')">  
+            <div class="favorite-name">${fav.name}</div>
+            <button class="favorite-remove" onclick="event.stopPropagation(); removeFavorite('${fav.name.replace(/'/g, "\\'")}')">🗑️</button>
         </div>
     `).join('');
 
-    elements.favoritesSection.classList.toggle('hidden', favorites.length === 0);
+    if (favorites.length === 0) {
+        elements.favoritesSection.classList.remove('show');
+    } else {
+        elements.favoritesSection.classList.add('show');
+    }
+}
+
+// Supprimer un favori
+function removeFavorite(cityName) {
+    const favorites = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY_FAVORITES) || '[]');
+    const filtered = favorites.filter(f => f.name !== cityName);
+    localStorage.setItem(CONFIG.STORAGE_KEY_FAVORITES, JSON.stringify(filtered));
+    loadFavorites();
 }
 
 // Charger les données au démarrage
