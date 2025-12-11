@@ -122,7 +122,6 @@ async function requestNotificationPermission() {
                 body: 'Les notifications sont maintenant activées ! 🎉',
                 icon: './icons/icon-192.png',
                 tag: 'welcome',
-                requireInteraction: false
             });
             
             notif.onclick = () => {
