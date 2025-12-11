@@ -186,46 +186,57 @@ async function fetchWeather(lat, lon, cityName) {
     }
 }
 
-function displayWeather(data, cityName) {
-    const current = data.current;
-    const hourly = data.hourly;
+function displayWeather(location, data) {
+    const { current, hourly } = data;
 
-    // Données actuelles
+    // ======== Nom de la ville ========
+    const cityName = `${location.name}${location.admin1 ? ', ' + location.admin1 : ''}, ${location.country}`;
     elements.cityName.textContent = cityName;
-    elements.temperature.textContent = Math.round(current.temperature_2m);
-    elements.weatherIcon.textContent = getWeatherEmoji(current.weather_code);
-    elements.wind.textContent = `${Math.round(current.wind_speed_10m)} km/h`;
-    elements.humidity.textContent = `${current.relative_humidity_2m} %`;
-    elements.feelsLike.textContent = `${Math.round(current.apparent_temperature)}°C`;
 
-    // Prévisions horaires (4 prochaines heures)
-    const currentHour = new Date().getHours();
+    // ======== Température actuelle ========
+    elements.currentTemp.textContent = `${Math.round(current.temperature_2m)}°C`;
+
+    // ======== Emoji météo ========
+    elements.weatherEmoji.textContent = getWeatherEmoji(current.weather_code);
+
+    // ======== Prévisions horaires ========
+    const now = new Date();
+    const currentISO = now.toISOString().slice(0, 13); // "2025-01-10T14"
+
+    // On cherche dans la liste l’heure correspondant au moment actuel
+    let startIndex = hourly.time.findIndex(t => t.startsWith(currentISO));
+    if (startIndex === -1) startIndex = 0; // fallback au cas où
+
     const hourlyItems = [];
-    
-    for (let i = 0; i < 4; i++) {
-        const hourIndex = currentHour + i + 1;
-        if (hourIndex < hourly.time.length) {
-            const time = new Date(hourly.time[hourIndex]);
-            const temp = hourly.temperature_2m[hourIndex];
-            const code = hourly.weather_code[hourIndex];
-            const isRain = CONFIG.RAIN_CODES.includes(code);
-            const isHighTemp = temp > CONFIG.TEMP_THRESHOLD;
-            
-            let alertClass = '';
-            if (isRain) alertClass = 'rain-alert';
-            else if (isHighTemp) alertClass = 'temp-alert';
 
-            hourlyItems.push(`
-                <div class="hourly-item ${alertClass}">
-                    <div class="hourly-time">${time.getHours()}h</div>
-                    <div class="hourly-icon">${getWeatherEmoji(code)}</div>
-                    <div class="hourly-temp">${Math.round(temp)}°C</div>
-                </div>
-            `);
-        }
+    for (let i = 1; i <= 4; i++) {
+        const hourIndex = startIndex + i;
+        if (hourIndex >= hourly.time.length) break;
+
+        const time = new Date(hourly.time[hourIndex]);
+        const temp = hourly.temperature_2m[hourIndex];
+        const code = hourly.weather_code[hourIndex];
+
+        // Détection alertes
+        const isRain = CONFIG.RAIN_CODES.includes(code);
+        const isHot = temp > CONFIG.TEMP_THRESHOLD;
+
+        let alertClass = '';
+        if (isRain) alertClass = 'rain-alert';
+        else if (isHot) alertClass = 'temp-alert';
+
+        hourlyItems.push(`
+            <div class="hourly-item ${alertClass}">
+                <div class="hourly-time">${time.getHours()}h</div>
+                <div class="hourly-icon">${getWeatherEmoji(code)}</div>
+                <div class="hourly-temp">${Math.round(temp)}°C</div>
+            </div>
+        `);
     }
 
     elements.hourlyList.innerHTML = hourlyItems.join('');
+
+    // ======== Afficher la section ========
     elements.weatherSection.classList.remove('hidden');
 }
 
