@@ -200,6 +200,32 @@ function sendWeatherNotification(city, message, type = 'info') {
         }
     }
 }
+
+function displayNotificationUI(city, message, type = 'info') {
+    // Créer une notification visuelle dans l'interface
+    const notificationDiv = document.createElement('div');
+    notificationDiv.className = `notification notification-${type}`;
+    notificationDiv.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 5px;">${city}</div>
+        <div>${message}</div>
+    `;
+    
+    // Insérer au début du container
+    const container = document.querySelector('.container');
+    container.insertBefore(notificationDiv, container.firstChild);
+    
+    // Animer l'entrée
+    requestAnimationFrame(() => {
+        notificationDiv.classList.add('show');
+    });
+    
+    // Supprimer après 5 secondes
+    setTimeout(() => {
+        notificationDiv.classList.remove('show');
+        setTimeout(() => notificationDiv.remove(), 300);
+    }, 5000);
+}
+
 // ===== Recherche et API Météo =====
 async function handleSearch() {
     requestNotificationPermission()
